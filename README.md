@@ -20,13 +20,7 @@
 
 `index.html` をブラウザで開くだけ。ビルド不要。
 
-```bash
-# ローカルで開く
-open index.html
-
-# もしくは GitHub Pages で公開
-# Settings > Pages > Branch: main / root で有効化
-```
+https://yk-infj.github.io/algo-lab/
 
 ## 今後の拡張案
 
