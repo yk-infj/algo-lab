@@ -1,5 +1,7 @@
 # Algo Lab
 
+![CI](https://github.com/<ユーザー名>/algo-lab/actions/workflows/ci.yml/badge.svg)
+
 ソートアルゴリズムと経路探索アルゴリズムをブラウザ上でリアルタイムに可視化するインタラクティブ・デモです。GitHub Pages で即座に公開でき、URL一つで動くデモを見せられます。
 
 ## デモの見せ方
@@ -25,8 +27,6 @@ open index.html
 
 # もしくは GitHub Pages で公開
 # Settings > Pages > Branch: main / root で有効化
-
-https://yk-infj.github.io/algo-lab/index.html
 ```
 
 ## benchmark.py — 理論値を実測で検証する
@@ -50,6 +50,21 @@ python3 benchmark.py
 WebAssemblyにコンパイルしたランタイム)でブラウザ上でそのまま実行するページ。
 サーバーもインストールも不要で、GitHub Pagesの `benchmark.html` を開くだけで
 「Pythonが実際に動いている画面」をターミナル風の出力とライブグラフで見せられる。
+
+## CI — GitHub Actions
+
+`main` への push / PR のたびに自動で以下を実行する(`.github/workflows/ci.yml`)。
+
+1. `pytest tests/` — 4アルゴリズムが正しくソートできているかを検証(空配列・単一要素・重複・逆順・ランダム配列など)
+2. `python benchmark.py` — ベンチマーク自体が壊れていないかの回帰テストを兼ねて実行
+3. 生成された `benchmark_chart.png` / `benchmark_result.csv` をActionsのArtifactとして保存
+
+ローカルでテストだけ実行したい場合:
+
+```bash
+pip install pytest matplotlib
+python -m pytest tests/ -v
+```
 
 ## 今後の拡張案
 
