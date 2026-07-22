@@ -42,6 +42,13 @@ python3 benchmark.py
 生成される。Bubble Sortだけが指数的に遅くなっていく様子が一目でわかり、
 フロントのビジュアライザーで見た「動き」が実測データでも裏付けられる。
 
+## benchmark.html — ブラウザでPythonをその場で実行する
+
+`benchmark.py` と同じロジックを、[Pyodide](https://pyodide.org/)(CPythonを
+WebAssemblyにコンパイルしたランタイム)でブラウザ上でそのまま実行するページ。
+サーバーもインストールも不要で、GitHub Pagesの `benchmark.html` を開くだけで
+「Pythonが実際に動いている画面」をターミナル風の出力とライブグラフで見せられる。
+
 ## 今後の拡張案
 
 - [ ] 挿入ソート・選択ソートの追加

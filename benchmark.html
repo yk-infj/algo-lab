@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Algo Lab — Live Python Benchmark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #10131a; --panel: #171b24; --panel-raised: #1d222d; --line: #262b36;
+    --text: #e7e4dc; --text-dim: #8a8f9c;
+    --amber: #f2a93c; --blue: #4c7ef5; --green: #4ade80; --red: #f2545b; --purple: #b18cf5;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: radial-gradient(1200px 600px at 50% -10%, #161b26 0%, var(--bg) 60%);
+    color: var(--text); font-family:'Inter',sans-serif; min-height:100vh; padding:32px 20px 60px;
+  }
+  .wrap{ max-width:1040px; margin:0 auto; }
+  header{ display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:22px; }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{ width:38px; height:38px; border-radius:8px; background:linear-gradient(135deg, var(--blue), var(--purple));
+    display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:15px; color:#0d0f14; flex-shrink:0; }
+  h1{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:26px; letter-spacing:-0.01em; margin:0; }
+  .sub{ color:var(--text-dim); font-size:13px; margin-top:2px; }
+  a.back{ color:var(--text-dim); font-size:13px; text-decoration:none; border:1px solid var(--line); padding:8px 14px; border-radius:8px; }
+  a.back:hover{ color:var(--text); border-color:#3a4152; }
+
+  .status-bar{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 18px; margin-bottom:16px;
+    display:flex; align-items:center; gap:14px; }
+  .dot{ width:10px; height:10px; border-radius:50%; background:var(--text-dim); flex-shrink:0; }
+  .dot.loading{ background:var(--amber); animation:pulse 1s infinite; }
+  .dot.running{ background:var(--blue); animation:pulse .6s infinite; }
+  .dot.done{ background:var(--green); }
+  @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.3; } }
+  .status-text{ font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--text); }
+  .spacer{ flex:1; }
+  button.run{ background:var(--blue); color:#0d0f1a; border:none; border-radius:8px; padding:9px 20px;
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:13.5px; cursor:pointer; }
+  button.run:disabled{ opacity:.5; cursor:not-allowed; }
+
+  .panels{ display:grid; grid-template-columns: 1.1fr 1fr; gap:16px; }
+  @media (max-width:800px){ .panels{ grid-template-columns:1fr; } }
+
+  .terminal{ background:#0c0e13; border:1px solid var(--line); border-radius:12px; padding:16px 18px;
+    font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:1.65; height:420px; overflow-y:auto; }
+  .terminal .line{ white-space:pre-wrap; }
+  .terminal .line.head{ color:var(--purple); }
+  .terminal .line.size{ color:var(--text-dim); }
+  .terminal .line.bubble{ color:var(--red); }
+  .terminal .line.quick{ color:var(--amber); }
+  .terminal .line.merge{ color:var(--blue); }
+  .terminal .line.heap{ color:var(--green); }
+  .cursor{ display:inline-block; width:7px; height:14px; background:var(--text); vertical-align:middle; animation:blink 1s step-end infinite; }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .chart-panel{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; }
+  .chart-title{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13.5px; color:var(--text-dim); margin-bottom:10px; }
+  canvas{ width:100%; height:340px; }
+  .legend{ display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; font-size:11.5px; color:var(--text-dim); }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .swatch{ width:10px; height:10px; border-radius:2px; display:inline-block; }
+
+  footer{ text-align:center; color:var(--text-dim); font-size:11.5px; margin-top:28px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="brand-mark">Py</div>
+      <div>
+        <h1>Live Python Benchmark</h1>
+        <div class="sub">ブラウザ上でPythonインタプリタを起動し、その場でソートを実行・計測</div>
+      </div>
+    </div>
+    <a class="back" href="index.html">← Algo Lab に戻る</a>
+  </header>
+
+  <div class="status-bar">
+    <div class="dot" id="statusDot"></div>
+    <div class="status-text" id="statusText">待機中 — Run を押すとPython(Pyodide)がロードされます</div>
+    <div class="spacer"></div>
+    <button class="run" id="runBtn">Run Python</button>
+  </div>
+
+  <div class="panels">
+    <div class="terminal" id="terminal"><div class="line head">$ python3 benchmark.py<span class="cursor"></span></div></div>
+    <div class="chart-panel">
+      <div class="chart-title">実測: 配列サイズ vs 実行時間</div>
+      <canvas id="chart" width="480" height="340"></canvas>
+      <div class="legend" id="legend"></div>
+    </div>
+  </div>
+
+  <footer>実行されているのはトランスパイルや模擬結果ではなく、CPython(Pyodide/WebAssembly)によるガチの実行結果です。</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
+<script>
+const terminal = document.getElementById('terminal');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const runBtn = document.getElementById('runBtn');
+const legend = document.getElementById('legend');
+
+function logLine(text, cls=''){
+  const div = document.createElement('div');
+  div.className = 'line ' + cls;
+  div.textContent = text;
+  terminal.appendChild(div);
+  terminal.scrollTop = terminal.scrollHeight;
+}
+function setStatus(text, cls){
+  statusText.textContent = text;
+  statusDot.className = 'dot ' + cls;
+}
+
+const PY_CODE = `
+import time, random, copy, json
+
+def bubble_sort(arr):
+    n = len(arr)
+    for i in range(n):
+        for j in range(0, n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+
+def quick_sort(arr):
+    if len(arr) <= 1:
+        return arr
+    pivot = arr[len(arr)//2]
+    left = [x for x in arr if x < pivot]
+    mid = [x for x in arr if x == pivot]
+    right = [x for x in arr if x > pivot]
+    return quick_sort(left) + mid + quick_sort(right)
+
+def merge_sort(arr):
+    if len(arr) <= 1:
+        return arr
+    mid = len(arr)//2
+    left, right = merge_sort(arr[:mid]), merge_sort(arr[mid:])
+    result, i, j = [], 0, 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            result.append(left[i]); i += 1
+        else:
+            result.append(right[j]); j += 1
+    result.extend(left[i:]); result.extend(right[j:])
+    return result
+
+def heapify(arr, n, root):
+    largest = root
+    l, r = 2*root+1, 2*root+2
+    if l < n and arr[l] > arr[largest]: largest = l
+    if r < n and arr[r] > arr[largest]: largest = r
+    if largest != root:
+        arr[root], arr[largest] = arr[largest], arr[root]
+        heapify(arr, n, largest)
+
+def heap_sort(arr):
+    n = len(arr)
+    for i in range(n//2 - 1, -1, -1):
+        heapify(arr, n, i)
+    for i in range(n-1, 0, -1):
+        arr[0], arr[i] = arr[i], arr[0]
+        heapify(arr, i, 0)
+    return arr
+
+ALGORITHMS = {"bubble": bubble_sort, "quick": quick_sort, "merge": merge_sort, "heap": heap_sort}
+SIZES = [100, 300, 600, 1000, 1500]
+
+results = {name: [] for name in ALGORITHMS}
+for size in SIZES:
+    base = [random.randint(0, 100000) for _ in range(size)]
+    for name, fn in ALGORITHMS.items():
+        data = copy.deepcopy(base)
+        start = time.perf_counter()
+        fn(data)
+        elapsed = time.perf_counter() - start
+        results[name].append(elapsed)
+        print(f"SIZE={size}|ALGO={name}|MS={elapsed*1000:.2f}")
+
+print("DONE|" + json.dumps({"sizes": SIZES, "results": results}))
+`;
+
+const colors = { bubble: '#f2545b', quick: '#f2a93c', merge: '#4c7ef5', heap: '#4ade80' };
+
+function drawChart(sizes, results){
+  const canvas = document.getElementById('chart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height, pad = 36;
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle = '#262b36'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad, 8); ctx.lineTo(pad, H-pad); ctx.lineTo(W-8, H-pad); ctx.stroke();
+
+  let maxT = 0;
+  Object.values(results).forEach(arr => arr.forEach(v => { if(v > maxT) maxT = v; }));
+  maxT *= 1.1;
+  const maxSize = sizes[sizes.length-1];
+
+  const xOf = s => pad + (s/maxSize) * (W - pad - 16);
+  const yOf = t => (H-pad) - (t/maxT) * (H - pad - 16);
+
+  Object.entries(results).forEach(([name, arr]) => {
+    ctx.strokeStyle = colors[name]; ctx.lineWidth = 2; ctx.beginPath();
+    arr.forEach((t,i) => {
+      const x = xOf(sizes[i]), y = yOf(t);
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+    arr.forEach((t,i) => {
+      ctx.fillStyle = colors[name];
+      ctx.beginPath(); ctx.arc(xOf(sizes[i]), yOf(t), 3, 0, Math.PI*2); ctx.fill();
+    });
+  });
+
+  legend.innerHTML = Object.keys(results).map(name =>
+    `<span><span class="swatch" style="background:${colors[name]}"></span>${name}</span>`
+  ).join('');
+}
+
+let pyodideReadyPromise = null;
+async function ensurePyodide(){
+  if(!pyodideReadyPromise){
+    setStatus('Pyodide (CPython/WebAssembly) をロード中…', 'loading');
+    logLine('Loading Pyodide runtime (CPython compiled to WebAssembly)...', 'size');
+    pyodideReadyPromise = loadPyodide();
+  }
+  return pyodideReadyPromise;
+}
+
+runBtn.onclick = async () => {
+  runBtn.disabled = true;
+  terminal.innerHTML = '<div class="line head">$ python3 benchmark.py<span class="cursor"></span></div>';
+  try{
+    const pyodide = await ensurePyodide();
+    setStatus('Python実行中…', 'running');
+    logLine('Pyodide ready. Executing benchmark.py in-browser...', 'size');
+
+    pyodide.setStdout({ batched: (msg) => {
+      if(msg.startsWith('DONE|')){
+        const data = JSON.parse(msg.slice(5));
+        drawChart(data.sizes, data.results);
+        setStatus('完了 — 実行時間はグラフを参照', 'done');
+        return;
+      }
+      const [sizePart, algoPart, msPart] = msg.split('|');
+      const size = sizePart.split('=')[1];
+      const algo = algoPart.split('=')[1];
+      const ms = msPart.split('=')[1];
+      logLine(`size=${size.padStart(5)}  ${algo.padEnd(8)}  ${ms.padStart(8)} ms`, algo);
+    }});
+
+    await pyodide.runPythonAsync(PY_CODE);
+  } catch(err){
+    logLine('ERROR: ' + err, 'bubble');
+    setStatus('エラーが発生しました', 'done');
+  } finally {
+    runBtn.disabled = false;
+  }
+};
+</script>
+</body>
+</html>
