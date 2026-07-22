@@ -25,6 +25,8 @@ open index.html
 
 # もしくは GitHub Pages で公開
 # Settings > Pages > Branch: main / root で有効化
+
+https://yk-infj.github.io/algo-lab/index.html
 ```
 
 ## benchmark.py — 理論値を実測で検証する
