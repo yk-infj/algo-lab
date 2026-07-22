@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Algo Lab — Sorting & Pathfinding Visualizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #10131a;
+    --panel: #171b24;
+    --panel-raised: #1d222d;
+    --line: #262b36;
+    --text: #e7e4dc;
+    --text-dim: #8a8f9c;
+    --amber: #f2a93c;
+    --blue: #4c7ef5;
+    --green: #4ade80;
+    --red: #f2545b;
+    --purple: #b18cf5;
+  }
+  *{ box-sizing: border-box; }
+  html, body{ margin:0; padding:0; }
+  body{
+    background: radial-gradient(1200px 600px at 50% -10%, #161b26 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 32px 20px 60px;
+  }
+  .wrap{ max-width: 1040px; margin: 0 auto; }
+
+  /* Header */
+  header{ display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom: 22px; }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{
+    width: 38px; height: 38px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--amber), var(--red));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono', monospace; font-weight:700; font-size:15px; color:#10131a;
+    flex-shrink:0;
+  }
+  h1{
+    font-family:'Space Grotesk', sans-serif; font-weight:700;
+    font-size: 26px; letter-spacing:-0.01em; margin:0;
+  }
+  .sub{ color:var(--text-dim); font-size:13px; margin-top:2px; }
+
+  .tabs{ display:flex; gap:6px; background:var(--panel); padding:4px; border-radius:10px; border:1px solid var(--line); }
+  .tab{
+    padding:8px 16px; border-radius:7px; border:none; cursor:pointer;
+    background:transparent; color:var(--text-dim); font-family:'Space Grotesk',sans-serif;
+    font-weight:600; font-size:13.5px; transition: all .15s ease;
+  }
+  .tab.active{ background:var(--panel-raised); color:var(--text); box-shadow: inset 0 0 0 1px var(--line); }
+
+  /* Readout panel — signature element */
+  .readout{
+    background: var(--panel);
+    border:1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    display:flex; align-items:center; gap:0;
+    overflow:hidden;
+    position:relative;
+  }
+  .readout::before{
+    content:''; position:absolute; left:0; top:0; bottom:0; width:2px;
+    background: var(--amber); opacity:0; transition: opacity .2s;
+  }
+  .readout.live::before{ opacity:1; box-shadow: 0 0 12px var(--amber); animation: scan 1.4s linear infinite; }
+  @keyframes scan{ 0%{ left:0; } 100%{ left:100%; } }
+  .stat{ flex:1; text-align:center; padding: 0 12px; }
+  .stat + .stat{ border-left: 1px solid var(--line); }
+  .stat-label{ font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); margin-bottom:6px; }
+  .stat-value{ font-family:'JetBrains Mono', monospace; font-size:20px; font-weight:700; color:var(--text); font-variant-numeric: tabular-nums; }
+  .stat-value.amber{ color:var(--amber); }
+  .stat-value.green{ color:var(--green); }
+  .stat-value.blue{ color:var(--blue); }
+
+  /* Controls */
+  .controls{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding: 14px 16px; margin-bottom:16px;
+    display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+  }
+  .field{ display:flex; align-items:center; gap:8px; }
+  .field label{ font-size:12px; color:var(--text-dim); font-weight:500; white-space:nowrap; }
+  select, input[type=range]{ accent-color: var(--amber); }
+  select{
+    background:var(--panel-raised); color:var(--text); border:1px solid var(--line);
+    border-radius:6px; padding:6px 10px; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer;
+  }
+  input[type=range]{ width:100px; }
+  .spacer{ flex:1; }
+  button.run{
+    background: var(--amber); color:#1a1206; border:none; border-radius:8px;
+    padding:9px 20px; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:13.5px;
+    cursor:pointer; transition: transform .1s ease;
+  }
+  button.run:hover{ transform: translateY(-1px); }
+  button.run:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
+  button.ghost{
+    background:transparent; border:1px solid var(--line); color:var(--text-dim);
+    border-radius:8px; padding:9px 16px; font-family:'Inter',sans-serif; font-weight:500; font-size:13px; cursor:pointer;
+  }
+  button.ghost:hover{ color:var(--text); border-color:#3a4152; }
+
+  /* Canvas area */
+  .stage{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding: 20px; min-height: 340px; display:flex; align-items:flex-end; justify-content:center; gap:3px;
+  }
+  .bar{ background: var(--blue); border-radius: 3px 3px 0 0; transition: background .12s ease; }
+  .bar.compare{ background: var(--amber); }
+  .bar.sorted{ background: var(--green); }
+
+  /* Grid for pathfinding */
+  #gridStage{ display:none; padding:16px; }
+  .grid{
+    display:grid; gap:2px; margin:0 auto;
+  }
+  .cell{
+    background: var(--panel-raised); border-radius:3px; cursor:pointer;
+    transition: background .08s ease;
+  }
+  .cell.wall{ background:#2b2f38; }
+  .cell.start{ background: var(--green); }
+  .cell.end{ background: var(--red); }
+  .cell.visited{ background: rgba(76,126,245,.55); }
+  .cell.frontier{ background: var(--amber); }
+  .cell.path{ background: var(--purple); }
+  .hint{ text-align:center; color:var(--text-dim); font-size:12px; margin-top:10px; }
+
+  /* Complexity footer */
+  .complexity{
+    margin-top:16px; background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:14px 18px; display:flex; gap:24px; flex-wrap:wrap; justify-content:center;
+  }
+  .complexity .item{ text-align:center; }
+  .complexity .item .name{ font-size:11.5px; color:var(--text-dim); margin-bottom:4px; }
+  .complexity .item .val{ font-family:'JetBrains Mono', monospace; font-size:15px; font-weight:700; }
+  .complexity .item .val.active{ color: var(--amber); }
+
+  footer{ text-align:center; color:var(--text-dim); font-size:11.5px; margin-top:28px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="brand-mark">λ</div>
+      <div>
+        <h1>Algo Lab</h1>
+        <div class="sub">ソート & 経路探索アルゴリズム・ビジュアライザー</div>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" id="tabSort">Sort</button>
+      <button class="tab" id="tabPath">Pathfind</button>
+    </div>
+  </header>
+
+  <div class="readout" id="readout">
+    <div class="stat"><div class="stat-label">Comparisons</div><div class="stat-value amber" id="statA">0</div></div>
+    <div class="stat"><div class="stat-label">Swaps / Visits</div><div class="stat-value blue" id="statB">0</div></div>
+    <div class="stat"><div class="stat-label">Elapsed</div><div class="stat-value" id="statC">0 ms</div></div>
+    <div class="stat"><div class="stat-label">Status</div><div class="stat-value green" id="statD">Idle</div></div>
+  </div>
+
+  <div class="controls" id="sortControls">
+    <div class="field">
+      <label>Algorithm</label>
+      <select id="sortAlgo">
+        <option value="bubble">Bubble Sort</option>
+        <option value="quick">Quick Sort</option>
+        <option value="merge">Merge Sort</option>
+        <option value="heap">Heap Sort</option>
+      </select>
+    </div>
+    <div class="field"><label>Size</label><input type="range" id="sizeRange" min="10" max="80" value="45"></div>
+    <div class="field"><label>Speed</label><input type="range" id="speedRange" min="1" max="100" value="60"></div>
+    <div class="spacer"></div>
+    <button class="ghost" id="shuffleBtn">Shuffle</button>
+    <button class="run" id="runSortBtn">Run</button>
+  </div>
+
+  <div class="controls" id="pathControls" style="display:none;">
+    <div class="field">
+      <label>Algorithm</label>
+      <select id="pathAlgo">
+        <option value="bfs">BFS</option>
+        <option value="dijkstra">Dijkstra</option>
+        <option value="astar">A*</option>
+      </select>
+    </div>
+    <div class="spacer"></div>
+    <button class="ghost" id="clearWallsBtn">Clear Walls</button>
+    <button class="ghost" id="resetPathBtn">Reset</button>
+    <button class="run" id="runPathBtn">Run</button>
+  </div>
+
+  <div class="stage" id="barStage"></div>
+  <div class="stage" id="gridStage">
+    <div>
+      <div class="grid" id="grid"></div>
+      <div class="hint">ドラッグで壁を作成 / 緑=開始 赤=終了</div>
+    </div>
+  </div>
+
+  <div class="complexity" id="complexityBar"></div>
+
+  <footer>Algo Lab — built for portfolio demo purposes. Open source on GitHub.</footer>
+</div>
+
+<script>
+// ---------- Shared ----------
+const statA = document.getElementById('statA');
+const statB = document.getElementById('statB');
+const statC = document.getElementById('statC');
+const statD = document.getElementById('statD');
+const readout = document.getElementById('readout');
+let startTime = 0;
+
+function setLive(isLive){
+  readout.classList.toggle('live', isLive);
+  statD.textContent = isLive ? 'Running' : 'Idle';
+  statD.className = 'stat-value ' + (isLive ? 'amber' : 'green');
+}
+function tick(){ statC.textContent = (performance.now() - startTime).toFixed(0) + ' ms'; }
+let tickInterval = null;
+function startTimer(){ startTime = performance.now(); tickInterval = setInterval(tick, 50); }
+function stopTimer(){ clearInterval(tickInterval); tick(); }
+
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+// ---------- Tabs ----------
+const tabSort = document.getElementById('tabSort');
+const tabPath = document.getElementById('tabPath');
+const barStage = document.getElementById('barStage');
+const gridStage = document.getElementById('gridStage');
+const sortControls = document.getElementById('sortControls');
+const pathControls = document.getElementById('pathControls');
+const complexityBar = document.getElementById('complexityBar');
+
+const sortComplexity = {
+  bubble: {best:'O(n)', avg:'O(n²)', worst:'O(n²)'},
+  quick:  {best:'O(n log n)', avg:'O(n log n)', worst:'O(n²)'},
+  merge:  {best:'O(n log n)', avg:'O(n log n)', worst:'O(n log n)'},
+  heap:   {best:'O(n log n)', avg:'O(n log n)', worst:'O(n log n)'},
+};
+const pathComplexity = {
+  bfs: {name:'BFS', complexity:'O(V + E)', note:'重みなし最短路を保証'},
+  dijkstra: {name:'Dijkstra', complexity:'O(E log V)', note:'非負重み最短路を保証'},
+  astar: {name:'A*', complexity:'O(E log V)', note:'ヒューリスティックで探索を高速化'},
+};
+
+function renderSortComplexity(algo){
+  const c = sortComplexity[algo];
+  complexityBar.innerHTML = `
+    <div class="item"><div class="name">Best</div><div class="val">${c.best}</div></div>
+    <div class="item"><div class="name">Average</div><div class="val active">${c.avg}</div></div>
+    <div class="item"><div class="name">Worst</div><div class="val">${c.worst}</div></div>
+  `;
+}
+function renderPathComplexity(algo){
+  const c = pathComplexity[algo];
+  complexityBar.innerHTML = `
+    <div class="item"><div class="name">Algorithm</div><div class="val active">${c.name}</div></div>
+    <div class="item"><div class="name">Time Complexity</div><div class="val">${c.complexity}</div></div>
+    <div class="item"><div class="name">Property</div><div class="val" style="font-size:12.5px">${c.note}</div></div>
+  `;
+}
+
+tabSort.onclick = () => {
+  tabSort.classList.add('active'); tabPath.classList.remove('active');
+  barStage.style.display='flex'; gridStage.style.display='none';
+  sortControls.style.display='flex'; pathControls.style.display='none';
+  renderSortComplexity(document.getElementById('sortAlgo').value);
+};
+tabPath.onclick = () => {
+  tabPath.classList.add('active'); tabSort.classList.remove('active');
+  barStage.style.display='none'; gridStage.style.display='flex';
+  sortControls.style.display='none'; pathControls.style.display='flex';
+  renderPathComplexity(document.getElementById('pathAlgo').value);
+};
+
+// ================= SORTING =================
+let array = [];
+const sizeRange = document.getElementById('sizeRange');
+const speedRange = document.getElementById('speedRange');
+const runSortBtn = document.getElementById('runSortBtn');
+let sortRunning = false;
+
+function genArray(){
+  const n = +sizeRange.value;
+  array = Array.from({length:n}, () => Math.floor(Math.random()*90)+10);
+  drawBars();
+}
+function drawBars(activeIdx=[], sortedIdx=[]){
+  barStage.innerHTML='';
+  const w = Math.max(4, Math.floor(600 / array.length) - 2);
+  array.forEach((v, i) => {
+    const bar = document.createElement('div');
+    bar.className = 'bar' + (activeIdx.includes(i) ? ' compare' : '') + (sortedIdx.includes(i) ? ' sorted' : '');
+    bar.style.width = w + 'px';
+    bar.style.height = (v*3.2) + 'px';
+    barStage.appendChild(bar);
+  });
+}
+function delayMs(){ return 210 - (+speedRange.value)*2; }
+
+let comparisons = 0, swaps = 0;
+function bump(el, val){ el.textContent = val; }
+
+async function bubbleSort(){
+  const n = array.length; const sortedIdx=[];
+  for(let i=0;i<n;i++){
+    for(let j=0;j<n-i-1;j++){
+      comparisons++; bump(statA, comparisons);
+      drawBars([j,j+1], sortedIdx);
+      await sleep(delayMs());
+      if(array[j] > array[j+1]){
+        [array[j],array[j+1]] = [array[j+1],array[j]];
+        swaps++; bump(statB, swaps);
+      }
+    }
+    sortedIdx.unshift(n-i-1);
+  }
+  drawBars([], Array.from({length:n}, (_,i)=>i));
+}
+async function quickSortRun(){
+  async function partition(lo, hi){
+    const pivot = array[hi]; let i = lo-1;
+    for(let j=lo;j<hi;j++){
+      comparisons++; bump(statA, comparisons);
+      drawBars([j,hi]); await sleep(delayMs());
+      if(array[j] < pivot){
+        i++; [array[i],array[j]]=[array[j],array[i]]; swaps++; bump(statB, swaps);
+      }
+    }
+    [array[i+1],array[hi]]=[array[hi],array[i+1]]; swaps++; bump(statB, swaps);
+    return i+1;
+  }
+  async function qs(lo, hi){
+    if(lo<hi){
+      const p = await partition(lo, hi);
+      await qs(lo, p-1); await qs(p+1, hi);
+    }
+  }
+  await qs(0, array.length-1);
+  drawBars([], Array.from({length:array.length}, (_,i)=>i));
+}
+async function mergeSortRun(){
+  async function merge(lo, mid, hi){
+    const left = array.slice(lo, mid+1), right = array.slice(mid+1, hi+1);
+    let i=0,j=0,k=lo;
+    while(i<left.length && j<right.length){
+      comparisons++; bump(statA, comparisons);
+      drawBars([k]); await sleep(delayMs());
+      if(left[i] <= right[j]){ array[k]=left[i]; i++; } else { array[k]=right[j]; j++; }
+      swaps++; bump(statB, swaps); k++;
+    }
+    while(i<left.length){ array[k]=left[i]; i++; k++; }
+    while(j<right.length){ array[k]=right[j]; j++; k++; }
+  }
+  async function ms(lo, hi){
+    if(lo<hi){
+      const mid = Math.floor((lo+hi)/2);
+      await ms(lo, mid); await ms(mid+1, hi);
+      await merge(lo, mid, hi);
+    }
+  }
+  await ms(0, array.length-1);
+  drawBars([], Array.from({length:array.length}, (_,i)=>i));
+}
+async function heapSortRun(){
+  const n = array.length;
+  async function heapify(size, root){
+    let largest = root, l=2*root+1, r=2*root+2;
+    comparisons++; bump(statA, comparisons);
+    if(l<size && array[l]>array[largest]) largest=l;
+    comparisons++; bump(statA, comparisons);
+    if(r<size && array[r]>array[largest]) largest=r;
+    if(largest!==root){
+      [array[root],array[largest]]=[array[largest],array[root]];
+      swaps++; bump(statB, swaps);
+      drawBars([root,largest]); await sleep(delayMs());
+      await heapify(size, largest);
+    }
+  }
+  for(let i=Math.floor(n/2)-1;i>=0;i--) await heapify(n,i);
+  for(let i=n-1;i>0;i--){
+    [array[0],array[i]]=[array[i],array[0]]; swaps++; bump(statB, swaps);
+    drawBars([0,i]); await sleep(delayMs());
+    await heapify(i,0);
+  }
+  drawBars([], Array.from({length:n}, (_,i)=>i));
+}
+
+runSortBtn.onclick = async () => {
+  if(sortRunning) return;
+  sortRunning = true; runSortBtn.disabled = true;
+  comparisons=0; swaps=0; bump(statA,0); bump(statB,0);
+  setLive(true); startTimer();
+  const algo = document.getElementById('sortAlgo').value;
+  if(algo==='bubble') await bubbleSort();
+  else if(algo==='quick') await quickSortRun();
+  else if(algo==='merge') await mergeSortRun();
+  else await heapSortRun();
+  stopTimer(); setLive(false);
+  sortRunning = false; runSortBtn.disabled = false;
+};
+document.getElementById('shuffleBtn').onclick = () => { if(!sortRunning) genArray(); };
+sizeRange.oninput = () => { if(!sortRunning) genArray(); };
+document.getElementById('sortAlgo').onchange = (e) => renderSortComplexity(e.target.value);
+
+// ================= PATHFINDING =================
+const ROWS = 14, COLS = 26;
+let grid = [];
+let start = {r:6, c:4}, end = {r:6, c:21};
+let mouseDown = false, dragMode = null;
+let pathRunning = false;
+
+function buildGrid(){
+  const gridEl = document.getElementById('grid');
+  const cellSize = 20;
+  gridEl.style.gridTemplateColumns = `repeat(${COLS}, ${cellSize}px)`;
+  gridEl.innerHTML = '';
+  grid = [];
+  for(let r=0;r<ROWS;r++){
+    const row = [];
+    for(let c=0;c<COLS;c++){
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.style.width = cellSize+'px'; cell.style.height = cellSize+'px';
+      cell.dataset.r = r; cell.dataset.c = c;
+      cell.addEventListener('mousedown', () => { if(pathRunning) return; mouseDown = true; toggleCell(r,c); });
+      cell.addEventListener('mouseenter', () => { if(mouseDown && !pathRunning) toggleCell(r,c,true); });
+      gridEl.appendChild(cell);
+      row.push({wall:false, el:cell});
+    }
+    grid.push(row);
+  }
+  document.body.addEventListener('mouseup', () => { mouseDown = false; dragMode = null; });
+  renderGrid();
+}
+function toggleCell(r,c, dragging=false){
+  if((r===start.r && c===start.c) || (r===end.r && c===end.c)) return;
+  if(!dragging){ dragMode = grid[r][c].wall ? 'erase' : 'wall'; }
+  grid[r][c].wall = dragMode === 'wall';
+  renderGrid();
+}
+function renderGrid(clear=false){
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const cell = grid[r][c];
+    cell.el.className = 'cell' + (cell.wall ? ' wall':'');
+    if(r===start.r && c===start.c) cell.el.className = 'cell start';
+    if(r===end.r && c===end.c) cell.el.className = 'cell end';
+  }
+}
+document.getElementById('clearWallsBtn').onclick = () => {
+  if(pathRunning) return;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) grid[r][c].wall = false;
+  renderGrid();
+};
+document.getElementById('resetPathBtn').onclick = () => { if(!pathRunning) buildGrid(); };
+document.getElementById('pathAlgo').onchange = (e) => renderPathComplexity(e.target.value);
+
+function neighbors(r,c){
+  const res = [];
+  [[r-1,c],[r+1,c],[r,c-1],[r,c+1]].forEach(([nr,nc]) => {
+    if(nr>=0 && nr<ROWS && nc>=0 && nc<COLS && !grid[nr][nc].wall) res.push([nr,nc]);
+  });
+  return res;
+}
+function key(r,c){ return r+','+c; }
+
+async function paint(r,c,cls){
+  if((r===start.r&&c===start.c)||(r===end.r&&c===end.c)) return;
+  grid[r][c].el.className = 'cell '+cls;
+}
+
+async function bfsRun(){
+  const q = [[start.r,start.c]];
+  const visited = new Set([key(start.r,start.c)]);
+  const cameFrom = {};
+  let visits = 0;
+  while(q.length){
+    const [r,c] = q.shift();
+    visits++; bump(statB, visits);
+    if(r===end.r && c===end.c) return {found:true, cameFrom};
+    await paint(r,c,'visited'); await sleep(12);
+    for(const [nr,nc] of neighbors(r,c)){
+      const k = key(nr,nc);
+      if(!visited.has(k)){ visited.add(k); cameFrom[k]=key(r,c); q.push([nr,nc]); }
+    }
+  }
+  return {found:false, cameFrom};
+}
+async function dijkstraRun(){
+  const dist = {}; dist[key(start.r,start.c)] = 0;
+  const visited = new Set(); const cameFrom = {};
+  const pq = [[0, start.r, start.c]];
+  let visits = 0;
+  while(pq.length){
+    pq.sort((a,b)=>a[0]-b[0]);
+    const [d,r,c] = pq.shift();
+    const k = key(r,c);
+    if(visited.has(k)) continue;
+    visited.add(k); visits++; bump(statB, visits);
+    if(r===end.r && c===end.c) return {found:true, cameFrom};
+    await paint(r,c,'visited'); await sleep(12);
+    for(const [nr,nc] of neighbors(r,c)){
+      const nk = key(nr,nc); const nd = d+1;
+      if(dist[nk]===undefined || nd < dist[nk]){ dist[nk]=nd; cameFrom[nk]=k; pq.push([nd,nr,nc]); }
+    }
+  }
+  return {found:false, cameFrom};
+}
+async function astarRun(){
+  const h = (r,c) => Math.abs(r-end.r)+Math.abs(c-end.c);
+  const gScore = {}; gScore[key(start.r,start.c)]=0;
+  const cameFrom = {}; const visited = new Set();
+  const open = [[h(start.r,start.c), start.r, start.c]];
+  let visits = 0;
+  while(open.length){
+    open.sort((a,b)=>a[0]-b[0]);
+    const [,r,c] = open.shift();
+    const k = key(r,c);
+    if(visited.has(k)) continue;
+    visited.add(k); visits++; bump(statB, visits);
+    if(r===end.r && c===end.c) return {found:true, cameFrom};
+    await paint(r,c,'visited'); await sleep(12);
+    for(const [nr,nc] of neighbors(r,c)){
+      const nk = key(nr,nc); const ng = gScore[k]+1;
+      if(gScore[nk]===undefined || ng < gScore[nk]){
+        gScore[nk]=ng; cameFrom[nk]=k; open.push([ng+h(nr,nc), nr, nc]);
+      }
+    }
+  }
+  return {found:false, cameFrom};
+}
+
+document.getElementById('runPathBtn').onclick = async () => {
+  if(pathRunning) return;
+  pathRunning = true; document.getElementById('runPathBtn').disabled = true;
+  renderGrid(); bump(statA, 0); bump(statB, 0);
+  setLive(true); startTimer();
+  const algo = document.getElementById('pathAlgo').value;
+  let result;
+  if(algo==='bfs') result = await bfsRun();
+  else if(algo==='dijkstra') result = await dijkstraRun();
+  else result = await astarRun();
+  stopTimer(); setLive(false);
+  if(result.found){
+    let cur = key(end.r,end.c); let len=0;
+    const path = [];
+    while(cur !== key(start.r,start.c) && result.cameFrom[cur]){
+      path.push(cur); cur = result.cameFrom[cur]; len++;
+    }
+    for(const k of path.reverse()){
+      const [r,c] = k.split(',').map(Number);
+      await paint(r,c,'path'); await sleep(15);
+    }
+    bump(statA, len);
+  }
+  pathRunning = false; document.getElementById('runPathBtn').disabled = false;
+};
+
+// ---------- init ----------
+genArray();
+renderSortComplexity('bubble');
+buildGrid();
+</script>
+</body>
+</html>
