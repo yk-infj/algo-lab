@@ -1,6 +1,6 @@
 # Algo Lab
 
-![CI](https://github.com/<ユーザー名>/algo-lab/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/yk-infj/algo-lab/actions/workflows/ci.yml/badge.svg)
 
 ソートアルゴリズムと経路探索アルゴリズムをブラウザ上でリアルタイムに可視化するインタラクティブ・デモです。GitHub Pages で即座に公開でき、URL一つで動くデモを見せられます。
 
